@@ -22,8 +22,10 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.commons.io.IOUtils;
 import org.netxms.base.InetAddressEx;
 import org.netxms.base.MacAddress;
 import org.netxms.client.NXCObjectCreationData;
@@ -63,7 +65,7 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       session.disconnect();
    }
    
-   private void executeScript(String script) throws Exception
+   private void executeScript(String script, List <String> params) throws Exception
    {
       ScriptCompilationResult r = session.compileScript(script, true);
       if (r.errorMessage != null)
@@ -73,14 +75,14 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       assertNull(r.errorMessage);
       
       scriptFailed = false;
-      session.executeScript(2, script, ScriptTest.this);
+      session.executeScript(2, script, params, ScriptTest.this);
       assertFalse(scriptFailed);         
    }
    
    public void testNXSLObjectFunctions() throws Exception
    {
       session = connect();
-      String script = new String(Files.readAllBytes(Paths.get("./nxslScripts/objectFunctions.nxsl")));
+      String script = IOUtils.toString(this.getClass().getResourceAsStream("/objectFunctions.nxsl"), "UTF-8");      
 
       session.syncObjects();
       AbstractObject object = session.findObjectById(2);
@@ -124,9 +126,12 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       cd.setIfIndex(1);
       session.createObject(cd);
       
-      script = String.format(script, nodeId, templateId, interfaceName1, interfaceName2);
-      
-      executeScript(script);
+      List<String> params = new ArrayList<String>();
+      params.add(Long.toString(nodeId));
+      params.add(Long.toString(templateId));
+      params.add(interfaceName1);
+      params.add(interfaceName2);
+      executeScript(script, params);
       
       session.deleteObject(nodeId);
       session.deleteObject(templateId);      
@@ -141,7 +146,7 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       {
          System.out.println("Executing script: " + p.toString());
          String script = new String(Files.readAllBytes(p));
-         executeScript(script);
+         executeScript(script, null);
       }
       
       session.disconnect();

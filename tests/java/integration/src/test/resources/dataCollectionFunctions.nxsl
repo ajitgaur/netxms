@@ -1,0 +1,35 @@
+/*
+* This script requires:
+*     node that is server node
+*/
+
+preCreatedNodeId = %d;
+preCreatedNode = FindObject(preCreatedNodeId);
+
+dciName = "Test.DCI";
+dciDescription = "NXSL integration Tests DCIs";
+
+
+//Create push DCI
+pushDci = CreateDCI(preCreatedNode, "push", "Test.DCI", "NXSL integration Tests DCIs", "int32", 0, 0);
+
+list = FindAllDCIs($node, "Server*", "*MAIN*");
+foreach (row : list) {
+   //compare that name and description contain filter
+}
+/*CreateDCI()
+FindAllDCIs()
+FindDCIByDescription()
+FindDCIByName()
+GetAvgDCIValue()
+GetDCIObject()
+GetDCIRawValue()
+GetDCIValue()
+GetDCIValueByDescription()
+GetDCIValueByName()
+GetDCIValues()
+GetMaxDCIValue()
+GetMinDCIValue()
+GetSumDCIValue()
+PushDCIData()
+*/
