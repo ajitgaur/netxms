@@ -8,10 +8,10 @@
 infrastructureService = FindObject(2);
 containerName = "Integration Test Container";
 nodeName = "Integration Test node";
-preCreatedNodeId = %d;
-templateId = %d;
-interfaceName1 = "%s";
-interfaceName2 = "%s";
+preCreatedNodeId = $1;
+templateId = $2;
+interfaceName1 = $3;
+interfaceName2 = $4;
 preCreatedNode = FindObject(preCreatedNodeId);
 template = FindObject(templateId);
 

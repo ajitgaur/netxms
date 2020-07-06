@@ -10827,9 +10827,10 @@ void ClientSession::executeScript(NXCPMessage *request)
       ObjectRefArray<NXSL_Value> sargs(count, 1);
       if (request->isFieldExist(VID_PARAMETER))
       {
-         TCHAR *parameters = request->getFieldAsString(VID_PARAMETER);
-         ParseValueList(vm, &parameters, sargs);
-         MemFree(parameters);
+         TCHAR parameters[1024];
+         request->getFieldAsString(VID_PARAMETER, parameters, 1024);
+         TCHAR *p = parameters;
+         ParseValueList(vm, &p, sargs, false);
       }
       else if (count > 0)
       {
