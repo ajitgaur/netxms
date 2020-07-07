@@ -21,9 +21,11 @@ package org.netxms.tests;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.apache.commons.io.IOUtils;
 import org.netxms.base.InetAddressEx;
 import org.netxms.base.MacAddress;
+import org.netxms.client.AgentPolicy;
 import org.netxms.client.NXCObjectCreationData;
 import org.netxms.client.NXCSession;
 import org.netxms.client.ScriptCompilationResult;
@@ -161,7 +163,6 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       params.add(dciName);
       executeScript(script, params);
       
-      //ToDo delete DCI
       DataCollectionConfiguration config = session.openDataCollectionConfiguration(managementNode.getObjectId());
       for (DataCollectionObject dc : config.getItems())
       {
@@ -172,6 +173,56 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       }
       config.close();
             
+      session.disconnect();
+   }
+      
+   public void testNXSLAgentFunctions() throws Exception
+   {
+      session = connect();
+      String script = IOUtils.toString(this.getClass().getResourceAsStream("/agentFunctions.nxsl"), "UTF-8");      
+
+      session.syncObjects();
+      List<AbstractObject> objects = session.getAllObjects(); //Find managment node
+      AbstractObject managementNode = null;
+      for (AbstractObject obj : objects)
+      {
+         if (obj instanceof Node && ((Node)obj).isManagementServer())
+         {
+            managementNode = obj;
+            break;            
+         }
+      }
+      assertNotNull(managementNode);      
+
+      String actionName = TestConstants.ACTION;
+      String actionName2 = "testEcho";
+
+      NXCObjectCreationData cd = new NXCObjectCreationData(AbstractObject.OBJECT_TEMPLATE, "TestTemplate", 3);
+      long templateId = session.createObject(cd);
+      assertFalse(templateId == 0);
+
+      Thread.sleep(1000);  // Object update should be received from server
+
+      AbstractObject object = session.findObjectById(templateId);
+      assertNotNull(object); 
+
+      AgentPolicy policy = new AgentPolicy("TestPolicy", AgentPolicy.AGENT_CONFIG);
+      policy.setContent("Action = " + actionName2 + ": echo $1 $2 $3 $4");
+      session.savePolicy(templateId, policy, false);
+
+      session.applyTemplate(templateId, managementNode.getObjectId());    
+      session.executeActionWithExpansion(managementNode.getObjectId(), 0, "Agent.Restart", false, null, null, null);
+
+      Thread.sleep(10000);  // Wait for agent restart
+      
+      List<String> params = new ArrayList<String>();
+      params.add(Long.toString(managementNode.getObjectId()));
+      params.add(actionName);
+      params.add(actionName2);
+      executeScript(script, params);
+      
+      session.deleteObject(templateId);
+      
       session.disconnect();
    }
 
@@ -192,6 +243,7 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
    @Override
    public void onError()
    {
+      System.out.println("Script error occured");
       scriptFailed = true;
    }
 }
