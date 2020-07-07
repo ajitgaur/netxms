@@ -19,12 +19,8 @@
 package org.netxms.tests;
 
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.commons.io.IOUtils;
 import org.netxms.base.InetAddressEx;
 import org.netxms.base.MacAddress;
@@ -32,7 +28,10 @@ import org.netxms.client.NXCObjectCreationData;
 import org.netxms.client.NXCSession;
 import org.netxms.client.ScriptCompilationResult;
 import org.netxms.client.TextOutputListener;
+import org.netxms.client.datacollection.DataCollectionConfiguration;
+import org.netxms.client.datacollection.DataCollectionObject;
 import org.netxms.client.objects.AbstractObject;
+import org.netxms.client.objects.Node;
 
 /**
  * Tests for scripting functions
@@ -138,17 +137,41 @@ public class ScriptTest extends AbstractSessionTest implements TextOutputListene
       session.disconnect();
    }
    
-   public void testNXSL() throws Exception
+   public void testNXSLDataCollectionFunctions() throws Exception
    {
       session = connect();
-      List<Path> paths = Files.walk(Paths.get("./nxslScripts")).filter(Files::isRegularFile).collect(Collectors.toList());
-      for(Path p : paths)
+      String script = IOUtils.toString(this.getClass().getResourceAsStream("/dataCollectionFunctions.nxsl"), "UTF-8");      
+
+      session.syncObjects();
+      List<AbstractObject> objects = session.getAllObjects(); //Find managment node
+      AbstractObject managementNode = null;
+      for (AbstractObject obj : objects)
       {
-         System.out.println("Executing script: " + p.toString());
-         String script = new String(Files.readAllBytes(p));
-         executeScript(script, null);
+         if (obj instanceof Node && ((Node)obj).isManagementServer())
+         {
+            managementNode = obj;
+            break;            
+         }
       }
+      assertNotNull(managementNode);      
+
+      String dciName = "Test.DCI";
+      List<String> params = new ArrayList<String>();
+      params.add(Long.toString(managementNode.getObjectId()));
+      params.add(dciName);
+      executeScript(script, params);
       
+      //ToDo delete DCI
+      DataCollectionConfiguration config = session.openDataCollectionConfiguration(managementNode.getObjectId());
+      for (DataCollectionObject dc : config.getItems())
+      {
+         if (dc.getName().equals(dciName))
+         {
+            config.deleteObject(dc.getId());
+         }
+      }
+      config.close();
+            
       session.disconnect();
    }
 
